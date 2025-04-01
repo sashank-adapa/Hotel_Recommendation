@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import json
-import datetime
 import base64
 from PIL import Image
 from geopy.distance import geodesic
@@ -9,8 +8,7 @@ import cv2
 import requests
 import numpy as np
 import ast
-import math
-import uuid
+
 
 # Import external modules (ensure these modules exist in your project)
 from database_setup import engine, df
