@@ -1,0 +1,12 @@
+streamlit
+pandas
+numpy
+opencv-python-headless
+requests
+google-generativeai
+geopy
+Pillow
+SQLAlchemy
+python-dotenv
+langchain_community
+langchain_google_genai
