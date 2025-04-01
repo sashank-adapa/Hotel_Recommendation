@@ -1,0 +1,31 @@
+Column Name,Data Description,Data Type
+id,Airbnb's unique identifier for the listing.,Float
+listing_url,URL to the listing page on Airbnb.,Text
+name,Name of the listing.,Text
+description,Detailed description of the listing.,Text
+neighborhood_overview,Host's description of the neighborhood.,Text
+picture_url,URL to the Airbnb-hosted image for the listing.,Text
+latitude,Uses the World Geodetic System (WGS84) projection for latitude.,Float
+longitude,Uses the World Geodetic System (WGS84) projection for longitude.,Float
+property_type,"The type of property listed on Airbnb, selected by the host.",Text
+accommodates,The maximum capacity of the listing (number of guests).,Integer
+bathrooms,The number of bathrooms in the listing.,Float
+bathrooms_text,Textual description of the number of bathrooms.,Text
+bedrooms,The number of bedrooms in the listing.,Float
+beds,The number of beds in the listing.,Float
+amenities,JSON field containing a list of amenities available in the listing.,Text 
+price,Daily price in local currency.,Float
+number_of_reviews,The total number of reviews the listing has received.,Integer
+number_of_reviews_ltm,The number of reviews the listing has received in last 12 months.,Integer
+number_of_reviews_l30d,The number of reviews the listing has received in last 30 days.,Integer
+review_scores_rating,The overall rating of the listing based on guest reviews.,Float
+review_scores_accuracy,Rating based on how accurate the listing description is.,Float
+review_scores_cleanliness,Rating based on the cleanliness of the listing.,Float
+review_scores_checkin,Rating based on ease of check-in.,Float
+review_scores_communication,Rating based on host communication.,Float
+review_scores_location,Rating based on the location of the listing.,Float
+review_scores_value,Rating based on the value for money of the listing.,Float
+instant_bookable,"Whether the guest can book instantly without host approval (t=true, f=false).",Text (Boolean)
+reviews_per_month,The average number of reviews per month the listing has received.,Float
+location,The City where the property located.,Text
+view,Contains the different view for an property in the text somewhere,Text
