@@ -4,40 +4,72 @@ import json
 
 import os
 
-
 llms = {
+
     "llm_1": ChatGoogleGenerativeAI(
+
         model="gemini-1.5-flash",
+
         temperature=0,
+
         max_tokens=None,
+
         timeout=None,
+
         max_retries=3,
-        api_key=os.getenv("GEMINI_API_KEY_1") 
+
+        api_key="AIzaSyCj02FWwvOF5zEYoA3n6JjhF2NZrBiVBjY"
+
     ),
+
     "llm_2": ChatGoogleGenerativeAI(
+
         model="gemini-1.5-flash",
+
         temperature=0,
+
         max_tokens=None,
+
         timeout=None,
+
         max_retries=3,
-        api_key=os.getenv("GEMINI_API_KEY_2")
+
+        api_key="AIzaSyAwn9E1avvE4DRy5JTAMmY0lFmJCACUbLI"
     ),
+
     "llm_3": ChatGoogleGenerativeAI(
+
         model="gemini-1.5-flash",
+
         temperature=0,
+
         max_tokens=None,
+
         timeout=None,
+
         max_retries=3,
-        api_key=os.getenv("GEMINI_API_KEY_3")
+
+        api_key="AIzaSyBJUnHcBp5yApOpRMyYQexF9sOEblgSmnI"
+        
     ),
-    "llm_4": ChatGoogleGenerativeAI(
+    
+     "llm_4": ChatGoogleGenerativeAI(
+
         model="gemini-1.5-flash",
+
         temperature=0,
+
         max_tokens=None,
+
         timeout=None,
+
         max_retries=3,
-        api_key=os.getenv("GEMINI_API_KEY_4")
-    ),
+
+        api_key="AIzaSyCit484FnApgyf610Wp6M4vtN7TbuWeubk"
+        
+    )
+
+
 }
 
 STATE_FILE = "llm_usage.json"
