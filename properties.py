@@ -1,6 +1,6 @@
 from llms import llm_usage, llms, swap_llm, save_usage
 
-def extract_property_info(previous_results,last_assistant_message,user_response):
+def extract_property_info(previous_results,message_history,user_response):
 
     prompt = f"""
     You are an expert property analyst with a deep understanding of Airbnb property data. The user is asking for a detailed explanation of a specific property based on the search results provided. Here is the context:
@@ -9,8 +9,8 @@ def extract_property_info(previous_results,last_assistant_message,user_response)
     These are a list of DataFrames containing various details about available properties, such as price, location, amenities, ratings, and reviews:
     {previous_results}
 
-    2. Last Assistant Message:  
-    {last_assistant_message}
+    2. Complete Previous Chat History:  
+    {message_history}
 
     3. User Response: 
     {user_response}
@@ -32,7 +32,7 @@ def extract_property_info(previous_results,last_assistant_message,user_response)
 
     return response
 
-def extract_property_id(previous_results,last_assistant_message,user_response):
+def extract_property_id(previous_results,message_history,user_response):
     
     prompt = f"""
         You are a specialized assistant tasked with extracting a property id from the user's input. The property id is a numeric value that uniquely identifies a property and it is available in one of the provided DataFrames in the previous results.
@@ -41,8 +41,8 @@ def extract_property_id(previous_results,last_assistant_message,user_response):
         Previous Results (DataFrames):
         {previous_results}
 
-        Last Assistant Message:
-        {last_assistant_message}
+        2. Complete Previous Chat History:  
+        {message_history}
 
         User Response:
         {user_response}

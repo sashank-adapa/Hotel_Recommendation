@@ -63,16 +63,16 @@ def extract_location_from_query(message_history):
         Extract the city name from the user's message while considering past context.
 
         Rules:
-        - If the latest user message contains a city from ['New Jersey', 'Seattle', 'San Francisco'], return that city.
+        - If the latest user message contains a city from ['San Francisco', 'New Jersey', 'Seattle', 'Oslo', 'Singapore', 'Tokyo', 'Taipei'], return that city.
         - If the message contains only a general place (e.g., airport, beach, downtown), refer to the most recent validated city mentioned by the user in previous messages.
-        - Only return one of the following cities: 'New Jersey', 'Seattle', or 'San Francisco'.
+        - Only return one of the following cities: 'San Francisco', 'New Jersey', 'Seattle', 'Oslo', 'Singapore', 'Tokyo', or 'Taipei'.
         - If no valid city is found, return 'NA'.
 
         Conversation History:
         {conversation_history}
 
         Expected Output:
-        - A single city name: 'New Jersey', 'Seattle', or 'San Francisco'.
+        - A single city name: 'San Francisco', 'New Jersey', 'Seattle', 'Oslo', 'Singapore', 'Tokyo', or 'Taipei'.
         - If no valid city is identified, return 'NA'.
         - Do not include any extra text, explanations, or formatting.
 
@@ -91,7 +91,7 @@ def extract_location_from_query(message_history):
         response = llm.invoke(prompt).content.strip()
 
         # Ensure response is valid and within allowed cities
-        valid_cities = {"New Jersey", "Seattle", "San Francisco"}
+        valid_cities = {'San Francisco', 'New Jersey', 'Seattle', 'Oslo', 'Singapore', 'Tokyo', 'Taipei'}
         return response if response in valid_cities else "NA"
 
     except Exception as e:

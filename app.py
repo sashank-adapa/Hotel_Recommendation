@@ -10,6 +10,7 @@ import requests
 import numpy as np
 import ast
 import math
+import uuid
 
 # Import external modules (ensure these modules exist in your project)
 from database_setup import engine, df
@@ -533,32 +534,36 @@ if "geo_pres" not in st.session_state:
 if "uploaded_image" not in st.session_state:
     st.session_state.uploaded_image = None
 
+if "prev_res_df" not in st.session_state:
+    st.session_state.prev_res_df = pd.DataFrame()
+
+
 # Main Streamlit App
 def main():
     # Initialize session state for dashboard visibility
     if 'show_dashboard' not in st.session_state:
         st.session_state.show_dashboard = True
-    
+
     # Create a placeholder for the dashboard
     placeholder_dashboard = st.empty()
-    
-    # Sidebar
+
+    # Sidebar (unchanged)
     with st.sidebar:
         st.title("Trip Planner Menu")
-        
+
         # Home button
         if st.button("🏠 Home", use_container_width=True):
             # Reset dashboard and chat history
             st.session_state.show_dashboard = True
-
             st.session_state.message_history = []
             st.session_state.filters = {}
             st.session_state.filter_df = pd.DataFrame()
             st.session_state.result_dfs = []
             st.session_state.geo_pres = False
             st.session_state.uploaded_image = None
+            st.session_state.prev_res_df = pd.DataFrame()
             st.rerun()
-        
+
         # Inject Custom CSS to Force White Text
         st.markdown("""
             <style>
@@ -578,13 +583,13 @@ def main():
             for idx, search in enumerate(reversed(search_history), 1):
                 with st.expander(f"Search {idx}"):
                     st.write(f"**Destination:** {search.get('destination', 'N/A')}")
-                    st.write(f"**Budget:** ${search.get('budget', 'N/A')}") 
-                    st.write(f"**Guests:** {search.get('guests', 'N/A')}") 
+                    st.write(f"**Budget:** ${search.get('budget', 'N/A')}")
+                    st.write(f"**Guests:** {search.get('guests', 'N/A')}")
                     st.write(f"**Timestamp:** {search.get('timestamp', 'N/A')}")
         else:
             st.markdown("<p class='custom-white-text'>No recent searches</p>", unsafe_allow_html=True)
-        
-        # Settings and Help Sections
+
+        # Settings and Help Sections (unchanged)
         st.header("Settings")
         st.markdown("""
             <div style='color: white; font-weight: bold !important;'>TBD</div>
@@ -598,12 +603,9 @@ def main():
         st.info("Comprehensive guide and support resources will be available soon.")
 
         st.markdown("---")
-
         st.markdown("""
             <div style='color: white; font-weight: bold !important;'>VayCation 1.0</div>
         """, unsafe_allow_html=True)
-
-
         st.markdown("""
             <div style='color: white; font-weight: bold !important;'>*Explore. Book. Enjoy.*</div>
         """, unsafe_allow_html=True)
@@ -626,11 +628,11 @@ def main():
         if uploaded_image is not None:
             uploaded_image.seek(0)
             image_data = base64.b64encode(uploaded_image.read()).decode("utf-8")
-            
+
             # Display the image
             uploaded_image.seek(0)  # Reset pointer
             image = Image.open(uploaded_image)
-            st.image(image)  
+            st.image(image)
 
             # Custom black caption
             st.markdown(
@@ -643,119 +645,17 @@ def main():
                 update_message_history("assistant", follow_up)
                 st.session_state.uploaded_image = uploaded_image
 
-                # Display assistant response
-                with st.chat_message("assistant"):
-                    st.markdown(follow_up)
-            
-        # # Display chat messages
-        # for message in st.session_state.message_history:
-        #     with st.chat_message(message["role"]):
-        #         st.markdown(message["content"])
-        
-
-        # Chat input
-        user_input = st.chat_input("Plan your vacation with AI !")
-
-        if user_input:
-            update_message_history("user", user_input)
-            
-            # Retrieve the last two messages for context
-            if len(st.session_state.message_history) >= 2:
-                last_assistant_message = st.session_state.message_history[-2]["content"]
-                user_response = st.session_state.message_history[-1]["content"]
-            else:
-                 user_response = st.session_state.message_history[-1]["content"] 
-                 last_assistant_message = ''  
-            
-            query_type = classify_query(last_assistant_message, user_response)
-            
-            if query_type == "data_query":
-                existing_filters = st.session_state.filters
-                filters = extract_data_preferences(last_assistant_message, user_response, existing_filters)
-                st.session_state.filters = filters
-                st.session_state.filter_df = filter_data(filters)
-                
-                if st.session_state.filter_df.shape[0] > 50:
-                    assistant_question = followup(st.session_state.filters, st.session_state.message_history)
-                    update_message_history("assistant", assistant_question)
-                else:
-                    properties = st.session_state.filter_df.sort_values('review_scores_rating', ascending=False).head(5)
-                    if properties.empty:
-                        update_message_history("assistant", genric_summarizer(st.session_state.message_history,
-                            f'No Properties Available. Please change your preferences: {st.session_state.filters}'))
-                    st.session_state.result_dfs.append(properties)
-                    update_message_history("assistant", 'What else can I do for you?')
-            
-            elif query_type == 'non_data_query':
-                coordinates = extract_coordinates_from_query(st.session_state.message_history)
-                location = extract_location_from_query(st.session_state.message_history)
-                
-                if (not isinstance(coordinates, tuple) or len(coordinates) != 2 or 
-                    coordinates == (0.0, 0.0) or location == 'NA'):
-                    update_message_history("assistant", "Sorry, can you choose the location from New Jersey, Seattle, or San Francisco?")
-                else:
-                    distance_df = filter_compute_distances(df, location, coordinates)
-                    if st.session_state.geo_pres:
-                        st.session_state.filter_df = filter_data(st.session_state.filters)
-                    if st.session_state.filter_df.empty:
-                        st.session_state.filter_df = distance_df
-                    else:
-                        st.session_state.filter_df = st.session_state.filter_df.merge(
-                            distance_df[['id', 'Distance']], on='id', how='inner'
-                        )
-                    st.session_state.geo_pres = True
-                    properties = st.session_state.filter_df.sort_values(['Distance', 'review_scores_rating'],
-                                                                        ascending=[True, False]).head(5)
-                    if properties.empty:
-                        update_message_history("assistant", genric_summarizer(st.session_state.message_history,
-                            f'No Properties Available. Please change your preferences: {st.session_state.filters}'))
-                    st.session_state.result_dfs.append(properties)
-                    update_message_history("assistant", 'What else can I do for you?')
-            
-            elif query_type == 'property_data_query':
-                response = extract_property_info(st.session_state.result_dfs,
-                                                st.session_state.message_history[-2]["content"],
-                                                st.session_state.message_history[-1]["content"])
-                update_message_history("assistant", response)
-                update_message_history("assistant", 'What else can I do for you?')
-            
-            elif query_type == 'property_non_data_query':
-                prop_id = extract_property_id(st.session_state.result_dfs,
-                                            st.session_state.message_history[-2]["content"],
-                                            st.session_state.message_history[-1]["content"])
-                
-                try:
-                    row = df[df['id'].astype(int) == prop_id]
-                    prop_coords = (row['latitude'].iloc[0], row['longitude'].iloc[0])
-                    dest_coords = extract_coordinates_from_query(st.session_state.message_history)
-                    distance = geodesic(prop_coords, dest_coords).kilometers
-                    info = f'It is {distance:.2f} kms away.'
-                    response = genric_summarizer(st.session_state.message_history, info)
-                    update_message_history("assistant", response)
-                    update_message_history("assistant", 'What else can I do for you?')
-                except Exception as e:
-                    update_message_history("assistant", "Unable to get the distance at the moment. Please try again after some time.")
-            
-            else:
-                response = genric_summarizer(st.session_state.message_history, '')
-                update_message_history("assistant", response)
-
-            # Display chat history
-            for msg in st.session_state.message_history:
-                with st.chat_message(msg["role"]):
-                    st.write(msg["content"])
-
-            # Check if we need to display property cards as part of the conversation
-            if 'result_dfs' in st.session_state and st.session_state.result_dfs:
-                # Wrap the property results in an assistant chat message
-                with st.chat_message("assistant"):
-                    recommended_properties = st.session_state.result_dfs[-1]
-                    for index, property_row in recommended_properties.iterrows():
+        # Display chat messages
+        for message in st.session_state.message_history:
+            with st.chat_message(message["role"]):
+                if isinstance(message["content"], list):  # Handle structured messages
+                    for property_info in message["content"]:
                         col1, col2 = st.columns([1, 2])
+
                         with col1:
-                            # Display property image
+                            # Display property image if available
                             try:
-                                response = requests.get(property_row['picture_url'], timeout=5, verify=False)
+                                response = requests.get(property_info['picture_url'], timeout=5, verify=False)
                                 if response.status_code == 200:
                                     image_arr = np.asarray(bytearray(response.content), dtype=np.uint8)
                                     img = cv2.imdecode(image_arr, cv2.IMREAD_COLOR)
@@ -764,105 +664,226 @@ def main():
                                     st.write("Image not available")
                             except Exception as e:
                                 st.write("Image not available")
+
                         with col2:
-                            st.subheader(f"{property_row['name']}")
-                            st.write(result_summarizer(property_row, st.session_state.message_history))
-                            st.write(f"**Location:** {property_row['location']}")
-                            if 'Distance' in property_row.index:
-                                st.write(f"**Distance (Miles):** {property_row['Distance']}")
-                            st.write(f"**Price:** ${property_row['price']} per night")
-                            st.write(f"**Amenities:** {list(set(item for item in ast.literal_eval(property_row['amenities'])))[:5]} etc... ")
-                            st.write(f"**Reviews:** {property_row['review_scores_rating']}")
-                            st.write(f"**Max Guests:** {property_row['accommodates']}")
-                            st.button(f"Book {property_row['name']}")
+                            # Display property details
+                            st.markdown(
+                            f"<h2 style='color: var(--primaryColor);'>{property_info["name"]}</h2>",
+                            unsafe_allow_html=True
+                        )
+                            st.write(property_info["summary"])
+                            st.write(f"**Location:** {property_info['location']}")
+                            if property_info.get("distance") is not None:
+                                st.write(f"**Distance (Miles):** {property_info['distance']}")
+                            st.write(f"**Price:** ${property_info['price']} per night")
+                            st.write(f"**Amenities:** {property_info['amenities']} etc...")
+                            st.write(f"**Reviews:** {property_info['reviews']}")
+                            st.write(f"**Max Guests:** {property_info['max_guests']}")
+
+                            st.markdown(
+                            f"""
+                            <a href="{property_info['url']}" target="_blank">
+                            <button style="
+                                background-color: green; 
+                                color: white; 
+                                border: none; 
+                                padding: 10px 20px; 
+                                border-radius: 5px;
+                                cursor: pointer;">
+                                Book {property_info['name']}
+                            </button>
+                            </a>
+                            """,
+                            unsafe_allow_html=True
+                        )
             
-        st.markdown("<h3 style='color: black;'>Property Search</h3>", unsafe_allow_html=True)
-        # Search Filters
-        col1, col2, col3, col4 = st.columns(4)
 
-        with col1:
-            destination = st.selectbox("Select Destination", ["City Name"] + list(df['location'].unique()))
+                else:
+                    # Display regular text messages
+                    st.markdown(message["content"])
 
-        with col2:
-            check_in = st.date_input("Check-in")
+    # Chat input - placed outside the main container to ensure it stays at the bottom
+    user_input = st.chat_input("Plan your vacation with AI !")
 
-        with col3:
-            check_out = st.date_input("Check-out")
+    if user_input:
+        update_message_history("user", user_input)
 
-        with col4:
-            guests = st.number_input("Number of Guests", min_value=1, max_value=10, value=2)
+        with st.chat_message("user"):
+            st.markdown(user_input)
 
-        # New columns for additional filters
-        col5, col6, col7, col8 = st.columns(4)
+        # Retrieve the last two messages for context
+        message_history = st.session_state.message_history
+        user_response = st.session_state.message_history[-1]["content"]
 
-        with col5:
-            default_rooms = math.ceil(guests / 2)
-            rooms = st.number_input("Number of Rooms", min_value=1, max_value=5, value=default_rooms)
+        query_type = classify_query(message_history, user_response)
 
-        with col6:
-            children = st.number_input("Number of Children", min_value=0, max_value=5, value=0)
+        if query_type == "data_query":
+            existing_filters = st.session_state.filters
+            filters = extract_data_preferences(message_history, user_response, existing_filters)
+            st.session_state.filters = filters
+            st.session_state.filter_df = filter_data(filters)
 
-        with col7:
-            length_of_stay = st.number_input("Length of Stay (Nights)", min_value=1, max_value=30, value=1)
+            if st.session_state.filter_df.shape[0] > 50:
+                assistant_question = followup(st.session_state.filters, st.session_state.message_history)
+                with st.chat_message("assistant"):
+                    st.markdown(assistant_question)
+                update_message_history("assistant", assistant_question)
+            else:
+                properties = st.session_state.filter_df.sort_values('review_scores_rating', ascending=False).head(5)
+                if properties.empty:
+                    with st.chat_message("assistant"):
+                        st.markdown(genric_summarizer(st.session_state.message_history,
+                                                      f'No Properties Available. Please change your preferences: {st.session_state.filters}'))
+                    update_message_history("assistant", genric_summarizer(st.session_state.message_history,
+                                                      f'No Properties Available. Please change your preferences: {st.session_state.filters}'))
+                else:
+                    st.session_state.result_dfs.append(properties)
 
-        with col8:
-            budget = st.slider("Budget per Night ($)", 50, 500, 200)
+        elif query_type == 'non_data_query':
+            coordinates = extract_coordinates_from_query(st.session_state.message_history)
+            location = extract_location_from_query(st.session_state.message_history)
 
-        amenities = st.multiselect(
-            "Amenities", 
-            ["Dedicated workspace", "Fast wifi", "Kitchen", "Pool", "Gym"]
-        )
+            if (not isinstance(coordinates, tuple) or len(coordinates) != 2 or coordinates == (0.0, 0.0) or location == 'NA'):
+                with st.chat_message("assistant"):
+                    st.markdown("Sorry, can you choose the location from San Francisco, New Jersey, Seattle, Oslo, Singapore, Tokyo or Taipei?")
+                update_message_history("assistant", "Sorry, can you choose the location from San Francisco, New Jersey, Seattle, Oslo, Singapore, Tokyo or Taipei?")
+            else:
+                distance_df = filter_compute_distances(df, location, coordinates)
+                if st.session_state.geo_pres:
+                    st.session_state.filter_df = filter_data(st.session_state.filters)
+                if st.session_state.filter_df.empty:
+                    st.session_state.filter_df = distance_df
+                else:
+                    st.session_state.filter_df = st.session_state.filter_df.merge(
+                        distance_df[['id', 'Distance']], on='id', how='inner'
+                    )
+                st.session_state.geo_pres = True
+                properties = st.session_state.filter_df.sort_values(['Distance', 'review_scores_rating'],
+                                                                    ascending=[True, False]).head(5)
+                if properties.empty:
+                    with st.chat_message("assistant"):
+                        st.markdown(genric_summarizer(st.session_state.message_history,
+                                                      f'No Properties Available. Please change your preferences: {st.session_state.filters}'))
+                    update_message_history("assistant", genric_summarizer(st.session_state.message_history,
+                                                      f'No Properties Available. Please change your preferences: {st.session_state.filters}'))
+                else:
+                    st.session_state.result_dfs.append(properties)
 
+        elif query_type == 'property_data_query':
+            response = extract_property_info(st.session_state.result_dfs,
+                                                st.session_state.message_history,
+                                                st.session_state.message_history[-1]["content"])
+            with st.chat_message("assistant"):
+                st.markdown(response)
+            update_message_history("assistant", response)
 
-        # Search Button
-        if st.button("Search Properties"):
-            # Hide dashboard
-            st.session_state.show_dashboard = False
-            
-            # Prepare user preferences
-            user_preferences = {
-                "destination": destination,
-                "budget": budget,
-                "amenities": amenities,
-                "guests": guests
-            }
+        elif query_type == 'property_non_data_query':
+            prop_id = extract_property_id(st.session_state.result_dfs,
+                                            st.session_state.message_history,
+                                            st.session_state.message_history[-1]["content"])
 
-            # Save search history
-            save_search_history(user_preferences)
+            try:
+                row = df[df['id'].astype(int) == prop_id]
+                prop_coords = (row['latitude'].iloc[0], row['longitude'].iloc[0])
+                dest_coords = extract_coordinates_from_query(st.session_state.message_history)
+                distance = geodesic(prop_coords, dest_coords).kilometers
+                info = f'It is {distance:.2f} kms away.'
+                response = genric_summarizer(st.session_state.message_history, info)
+                with st.chat_message("assistant"):
+                    st.markdown(response)
+                update_message_history("assistant", response)
+            except Exception as e:
+                update_message_history("assistant", "Unable to get the distance at the moment. Please try again after some time.")
 
-            # Get Recommendations
-            recommended_properties = recommend_properties(user_preferences, df)
-            st.session_state.filters = user_preferences
-            
-            # Display Recommendations
-            st.header("Recommended Properties")
-            
-            if len(recommended_properties) == 0:
-                st.write("No properties match your current search criteria. Try adjusting your filters.")
-            
-            for index, property_row in recommended_properties.iterrows():
-                col1, col2 = st.columns([1, 2])
-                
-                with col1:
-                    # Display property image
-                    try:
-                        response = requests.get(property_row['picture_url'],timeout=5, verify=False)
-                        if response.status_code == 200:
-                            image_arr = np.asarray(bytearray(response.content), dtype=np.uint8)
-                            img = cv2.imdecode(image_arr, cv2.IMREAD_COLOR)
-                            st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-                    except Exception as e:
-                        st.write("Image not available")
-                
-                with col2:
-                    st.subheader(f"{property_row['name']}")
-                    st.write(f"**Location:** {property_row['location']}")
-                    st.write(f"**Price:** ${property_row['price']} per night")
-                    st.write(f"**Amenities:** {list(set(item for item in ast.literal_eval(property_row['amenities'])))[:5]} etc... ")
-                    st.write(f"**Reviews:** {property_row['review_scores_rating']} / 5")
-                    st.write(f"**Max Guests:** {property_row['accommodates']}")
-                    st.button(f"Book {property_row['name']}")
+        else:
+            response = genric_summarizer(st.session_state.message_history, '')
+            with st.chat_message("assistant"):
+                st.markdown(response)
+            update_message_history("assistant", response)
+        
 
+        # Check if we need to display property cards as part of the conversation
+        if ('result_dfs' in st.session_state and 
+            st.session_state.result_dfs and 
+            (st.session_state.prev_res_df.empty or 
+            not st.session_state.result_dfs[-1].equals(st.session_state.prev_res_df))):
+
+            with st.chat_message("assistant"):
+                recommended_properties = st.session_state.result_dfs[-1]
+                message_content = []  # List to store structured message content
+
+                for index, property_row in recommended_properties.iterrows():
+                    col1, col2 = st.columns([1, 2])
+                    property_message = {}
+
+                    with col1:
+                        # Display property image
+                        try:
+                            response = requests.get(property_row['picture_url'], timeout=5, verify=False)
+                            if response.status_code == 200:
+                                image_arr = np.asarray(bytearray(response.content), dtype=np.uint8)
+                                img = cv2.imdecode(image_arr, cv2.IMREAD_COLOR)
+                                st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), use_container_width=True)
+                            else:
+                                st.write("Image not available")
+                        except Exception as e:
+                            st.write("Image not available")
+
+                    with col2:
+                        st.markdown(
+                            f"<h2 style='color: var(--primaryColor);'>{property_row['name']}</h2>",
+                            unsafe_allow_html=True
+                        )
+
+                        summary = result_summarizer(property_row, st.session_state.message_history)
+                        st.write(summary)
+                        st.write(f"**Location:** {property_row['location']}")
+                        if 'Distance' in property_row.index:
+                            st.write(f"**Distance (Miles):** {property_row['Distance']}")
+                        st.write(f"**Price:** ${property_row['price']} per night")
+                        st.write(f"**Amenities:** {list(set(item for item in ast.literal_eval(property_row['amenities'])))[:5]} etc...")
+                        st.write(f"**Reviews:** {property_row['review_scores_rating']}")
+                        st.write(f"**Max Guests:** {property_row['accommodates']}")
+
+                        # Store all this information in a structured format
+                        property_message = {
+                            "name": property_row['name'],
+                            "summary": summary,
+                            "location": property_row['location'],
+                            "distance": property_row['Distance'] if 'Distance' in property_row.index else None,
+                            "price": property_row['price'],
+                            "amenities": list(set(item for item in ast.literal_eval(property_row['amenities'])))[:5],
+                            "reviews": property_row['review_scores_rating'],
+                            "max_guests": property_row['accommodates'],
+                            "picture_url":property_row['picture_url']
+                        }
+
+                        # Save button information
+                        st.markdown(
+                            f"""
+                            <a href="{property_row['listing_url']}" target="_blank">
+                            <button style="
+                                background-color: green; 
+                                color: white; 
+                                border: none; 
+                                padding: 10px 20px; 
+                                border-radius: 5px;
+                                cursor: pointer;">
+                                Book {property_row['name']}
+                            </button>
+                            </a>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                        property_message["url"] = property_row["listing_url"]
+
+                    # Append the structured message for this property
+                    message_content.append(property_message)
+
+                # Store the assistant message as an exact structured response in history
+                update_message_history("assistant", message_content)
+
+                st.session_state.prev_res_df = st.session_state.result_dfs[-1]
 
 # Run the app
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import pandas as pd
 
 
 # Function to classify query based on last assistant message and user response
-def classify_query(last_assistant_message,user_response): 
+def classify_query(message_history,user_response): 
 
     prompt = f"""
         You are an expert classifier for Airbnb search queries. Your task is to carefully analyze the provided input data and determine which category the user's response belongs to. Follow the guidelines and examples below to ensure accurate classification.
@@ -44,7 +44,7 @@ def classify_query(last_assistant_message,user_response):
         - The user is actively searching for Airbnb properties.
         - The dataset contains structured information like city, price, amenities, ratings, and reviews but does not include data about nearby landmarks or distances.
         - Input Data provided includes:
-            - Last Assistant Question: "{last_assistant_message}"
+            - Complete Message History: "{message_history}"
             - User Response: "{user_response}"
             - Dataset Schema: {data_dict_description}
 
@@ -76,7 +76,7 @@ def classify_query(last_assistant_message,user_response):
         return "non_data_query"
 
  
-def extract_data_preferences(last_assistant_message,user_response,filters):
+def extract_data_preferences(message_history,user_response,filters):
 
     prompt = f"""
     You are an intelligent Airbnb search filter extractor. Your task is to analyze the conversation history and update the search filters based on the user's latest response.
@@ -90,7 +90,7 @@ def extract_data_preferences(last_assistant_message,user_response,filters):
     - Do not infer missing values; only extract explicitly mentioned filters.
 
     Input Data:
-    - Last Assistant Message: "{last_assistant_message}"
+    - Complete message history: "{message_history}"
     - User Response: "{user_response}"
     - Dataset Schema: {data_dict_description}
     - Existing Filters: {filters}
